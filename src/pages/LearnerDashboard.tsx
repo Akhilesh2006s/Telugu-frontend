@@ -728,6 +728,9 @@ const LearnerDashboard = () => {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      
+      // Store start time for accurate duration calculation
+      const startTime = Date.now();
 
       mediaRecorder.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -736,14 +739,18 @@ const LearnerDashboard = () => {
       mediaRecorder.onstop = () => {
         console.log('🎤 MediaRecorder stopped, creating recording...');
         console.log('🎤 Audio chunks count:', audioChunksRef.current.length);
-        console.log('🎤 Recording time:', recordingTime);
+        
+        // Calculate actual recording duration from start time
+        const actualDuration = Math.floor((Date.now() - startTime) / 1000);
+        console.log('🎤 Actual recording duration:', actualDuration, 'seconds');
+        console.log('🎤 State recording time:', recordingTime);
         
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         console.log('🎤 Audio blob created, size:', audioBlob.size);
         
         // Check if recording has minimum duration (at least 1 second)
-        if (recordingTime < 1) {
-          console.log('🎤 Recording too short, discarding:', recordingTime, 'seconds');
+        if (actualDuration < 1) {
+          console.log('🎤 Recording too short, discarding:', actualDuration, 'seconds');
           toast({
             title: "Recording Too Short",
             description: "Please record for at least 1 second.",
@@ -759,7 +766,7 @@ const LearnerDashboard = () => {
           milestone: currentMilestone,
           blob: audioBlob,
           url: URL.createObjectURL(audioBlob),
-          duration: recordingTime,
+          duration: actualDuration,
           timestamp: new Date(),
           status: "draft"
         };
@@ -768,7 +775,9 @@ const LearnerDashboard = () => {
           id: newRecording.id,
           milestone: newRecording.milestone,
           duration: newRecording.duration,
-          blobSize: newRecording.blob.size
+          blobSize: newRecording.blob.size,
+          actualDuration: actualDuration,
+          stateRecordingTime: recordingTime
         });
         
         // Check if we have 5 recordings for this milestone
@@ -2144,7 +2153,30 @@ const LearnerDashboard = () => {
                       </CardContent>
                     </Card>
 
-                    {/* Practice Section - Audio Recording for Milestones 1-8 */}
+                    {/* Practice Section - Conditional based on milestone */}
+                    {currentMilestone >= 9 && currentMilestone <= 19 ? (
+                      // Word Puzzle Practice for Milestones 9-19
+                      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <BookOpen className="w-5 h-5" />
+                            Word Puzzle Practice
+                          </CardTitle>
+                          <CardDescription>
+                            Practice vocabulary and word recognition through interactive puzzles for Milestone {currentMilestone}.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <WordPuzzle 
+                            milestone={currentMilestone}
+                            title={getMilestoneTitle(currentMilestone)}
+                            teluguTitle={getMilestoneTitle(currentMilestone)}
+                            description={getMilestoneDescription(currentMilestone)}
+                          />
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      // Voice Recording Practice for Milestones 1-8
                       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
@@ -2330,6 +2362,7 @@ const LearnerDashboard = () => {
                         )}
                         </CardContent>
                       </Card>
+                    )}
 
                     {/* Milestone System */}
                     <MilestoneSystem 
